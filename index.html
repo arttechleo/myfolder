@@ -1,0 +1,633 @@
+function loadFolderImages() {
+            const closedImg = document.getElementById('folderClosed');
+            const openImg = document.getElementById('folderOpen');
+            
+            // Convert your uploaded folder images to base64
+            // For the closed mouth folder (Image 1)
+            closedImg.src = './folderimage.png;base64'<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1TB File Organizer Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #87CEEB 0%, #5F9EA0 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            color: #2C3E50;
+            overflow-x: hidden;
+        }
+
+        .game-header {
+            text-align: center;
+            margin-bottom: 20px;
+            z-index: 10;
+        }
+
+        .game-title {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            color: #34495E;
+        }
+
+        .game-subtitle {
+            font-size: 1.2em;
+            opacity: 0.8;
+            color: #2C3E50;
+        }
+
+        .progress-section {
+            width: 100%;
+            max-width: 400px;
+            margin-bottom: 20px;
+            z-index: 10;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 25px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 10px;
+            border: 2px solid rgba(255,255,255,0.5);
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3498DB, #2980B9);
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 15px;
+        }
+
+        .progress-text {
+            text-align: center;
+            font-size: 1em;
+            font-weight: bold;
+            color: #2C3E50;
+        }
+
+        .folder-container {
+            position: relative;
+            width: 300px;
+            height: 250px;
+            margin: 20px 0;
+            z-index: 10;
+        }
+
+        .folder-character {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .folder-character.drag-over {
+            transform: scale(1.1);
+            filter: brightness(1.1);
+        }
+
+        .folder-image {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            filter: drop-shadow(0 8px 25px rgba(0,0,0,0.2));
+            transition: opacity 0.3s ease;
+        }
+
+        .folder-image.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .folder-stats {
+            text-align: center;
+            background: rgba(255,255,255,0.2);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            margin-top: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            color: #2C3E50;
+        }
+
+        .files-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .floating-file {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(145deg, #ECF0F1, #BDC3C7);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: grab;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            border: 2px solid rgba(255,255,255,0.5);
+            pointer-events: auto;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .floating-file:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+
+        .floating-file.dragging {
+            opacity: 0.7;
+            transform: rotate(10deg) scale(0.9);
+            z-index: 1000;
+        }
+
+        .file-icon {
+            font-size: 24px;
+            margin-bottom: 2px;
+        }
+
+        .file-size {
+            font-size: 8px;
+            color: #2C3E50;
+            font-weight: bold;
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            z-index: 10;
+        }
+
+        .control-btn {
+            background: #3498DB;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 25px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .control-btn:hover {
+            background: #2980B9;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .success-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(145deg, #2ECC71, #27AE60);
+            color: white;
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+            display: none;
+            z-index: 1000;
+            border: 3px solid rgba(255,255,255,0.3);
+        }
+
+        @keyframes blink {
+            0%, 90%, 100% { transform: scaleY(1); }
+            95% { transform: scaleY(0.1); }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            33% { transform: translateY(-20px) rotate(5deg); }
+            66% { transform: translateY(-10px) rotate(-3deg); }
+        }
+
+        @keyframes eyeFollow {
+            0% { transform: translate(-50%, -50%) translateX(0px); }
+            50% { transform: translate(-50%, -50%) translateX(3px); }
+            100% { transform: translate(-50%, -50%) translateX(0px); }
+        }
+
+        .eye-tracking .pupil {
+            animation: eyeFollow 3s ease-in-out infinite;
+        }
+
+        @media (max-width: 768px) {
+            .folder-container {
+                width: 250px;
+                height: 200px;
+            }
+            
+            .floating-file {
+                width: 50px;
+                height: 50px;
+            }
+            
+            .file-icon {
+                font-size: 20px;
+            }
+            
+            .controls {
+                bottom: 10px;
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-header">
+        <h1 class="game-title">🍽️ Hungry Folder Game</h1>
+        <p class="game-subtitle">Feed the folder to reach 1TB! Drag files to its mouth!</p>
+    </div>
+
+    <div class="progress-section">
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-text" id="progressText">0 GB / 1024 GB (0%)</div>
+    </div>
+
+    <div class="folder-container">
+        <div class="folder-character" id="folderCharacter">
+            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==" 
+                 class="folder-image" id="folderClosed" alt="Folder Closed">
+            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==" 
+                 class="folder-image hidden" id="folderOpen" alt="Folder Open">
+        </div>
+    </div>
+
+    <div class="folder-stats">
+        <div>Files Eaten: <span id="fileCount">0</span></div>
+        <div>Total Size: <span id="totalSize">0 GB</span></div>
+    </div>
+
+    <div class="files-container" id="filesContainer"></div>
+
+    <div class="controls">
+        <button class="control-btn" onclick="addMoreFiles()">🍽️ More Files</button>
+        <button class="control-btn" onclick="resetGame()">🔄 Reset Game</button>
+    </div>
+
+    <div class="success-message" id="successMessage">
+        🎉 Congratulations! 🎉<br>
+        Your folder is completely full at 1TB!<br>
+        What a feast! 🍽️
+    </div>
+
+    <script>
+        const fileTypes = [
+            { icon: '📄', name: 'Document', size: 2, colors: ['#3498DB', '#2980B9'] },
+            { icon: '🖼️', name: 'Image', size: 5, colors: ['#E74C3C', '#C0392B'] },
+            { icon: '🎵', name: 'Music', size: 8, colors: ['#9B59B6', '#8E44AD'] },
+            { icon: '🎬', name: 'Video', size: 150, colors: ['#E67E22', '#D35400'] },
+            { icon: '📊', name: 'Spreadsheet', size: 12, colors: ['#27AE60', '#229954'] },
+            { icon: '🔧', name: 'Software', size: 500, colors: ['#F39C12', '#E67E22'] },
+            { icon: '💾', name: 'Database', size: 1000, colors: ['#34495E', '#2C3E50'] },
+            { icon: '📦', name: 'Archive', size: 200, colors: ['#16A085', '#138D75'] }
+        ];
+
+        let currentData = 0;
+        let totalFiles = 0;
+        let fileCounter = 0;
+        const targetSize = 1024;
+        const maxFiles = 8;
+
+        function createFloatingFile() {
+            const fileType = fileTypes[Math.floor(Math.random() * fileTypes.length)];
+            const variation = 0.7 + Math.random() * 0.6;
+            const actualSize = Math.round(fileType.size * variation);
+            
+            const file = document.createElement('div');
+            file.className = 'floating-file';
+            file.draggable = true;
+            file.dataset.size = actualSize;
+            file.id = 'file-' + fileCounter++;
+            
+            // Random position around the edges
+            const side = Math.floor(Math.random() * 4);
+            let x, y;
+            
+            switch(side) {
+                case 0: // top
+                    x = Math.random() * window.innerWidth;
+                    y = -80;
+                    break;
+                case 1: // right
+                    x = window.innerWidth + 80;
+                    y = Math.random() * window.innerHeight;
+                    break;
+                case 2: // bottom
+                    x = Math.random() * window.innerWidth;
+                    y = window.innerHeight + 80;
+                    break;
+                case 3: // left
+                    x = -80;
+                    y = Math.random() * window.innerHeight;
+                    break;
+            }
+            
+            file.style.left = x + 'px';
+            file.style.top = y + 'px';
+            file.style.background = `linear-gradient(145deg, ${fileType.colors[0]}, ${fileType.colors[1]})`;
+            file.style.animationDelay = Math.random() * 3 + 's';
+            
+            file.innerHTML = `
+                <div class="file-icon">${fileType.icon}</div>
+                <div class="file-size">${actualSize}GB</div>
+            `;
+            
+            // Move towards center area
+            setTimeout(() => {
+                const centerX = window.innerWidth / 2 + (Math.random() - 0.5) * 400;
+                const centerY = window.innerHeight / 2 + (Math.random() - 0.5) * 300;
+                file.style.left = centerX + 'px';
+                file.style.top = centerY + 'px';
+            }, 100);
+            
+            file.addEventListener('dragstart', handleDragStart);
+            file.addEventListener('dragend', handleDragEnd);
+            
+            document.getElementById('filesContainer').appendChild(file);
+            
+            // Auto-remove after 30 seconds if not used
+            setTimeout(() => {
+                if (file.parentNode) {
+                    file.remove();
+                }
+            }, 30000);
+        }
+
+        function handleDragStart(e) {
+            e.dataTransfer.setData('text/plain', JSON.stringify({
+                size: parseInt(e.target.dataset.size),
+                id: e.target.id
+            }));
+            e.target.classList.add('dragging');
+            openMouth();
+        }
+
+        function handleDragEnd(e) {
+            e.target.classList.remove('dragging');
+            closeMouth();
+        }
+
+        function openMouth() {
+            document.getElementById('folderClosed').classList.add('hidden');
+            document.getElementById('folderOpen').classList.remove('hidden');
+        }
+
+        function closeMouth() {
+            document.getElementById('folderClosed').classList.remove('hidden');
+            document.getElementById('folderOpen').classList.add('hidden');
+        }
+
+        function setupDropZone() {
+            const folderCharacter = document.getElementById('folderCharacter');
+            
+            folderCharacter.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                folderCharacter.classList.add('drag-over');
+            });
+            
+            folderCharacter.addEventListener('dragleave', (e) => {
+                folderCharacter.classList.remove('drag-over');
+            });
+            
+            folderCharacter.addEventListener('drop', (e) => {
+                e.preventDefault();
+                folderCharacter.classList.remove('drag-over');
+                
+                const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+                eatFile(data.size, data.id);
+            });
+        }
+
+        function eatFile(size, fileId) {
+            currentData += size;
+            totalFiles++;
+            
+            // Remove the eaten file
+            const file = document.getElementById(fileId);
+            if (file) {
+                file.style.transform = 'scale(0)';
+                setTimeout(() => file.remove(), 300);
+            }
+            
+            // Animate eating
+            setTimeout(() => {
+                closeMouth();
+            }, 500);
+            
+            updateDisplay();
+            
+            if (currentData >= targetSize) {
+                showSuccessMessage();
+            }
+        }
+
+        function updateDisplay() {
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            const fileCount = document.getElementById('fileCount');
+            const totalSize = document.getElementById('totalSize');
+            
+            const percentage = Math.min((currentData / targetSize) * 100, 100);
+            
+            progressFill.style.width = percentage + '%';
+            progressText.textContent = `${currentData} GB / ${targetSize} GB (${Math.round(percentage)}%)`;
+            fileCount.textContent = totalFiles;
+            totalSize.textContent = currentData + ' GB';
+        }
+
+        function showSuccessMessage() {
+            const successMessage = document.getElementById('successMessage');
+            successMessage.style.display = 'block';
+            
+            setTimeout(() => {
+                successMessage.style.display = 'none';
+            }, 4000);
+        }
+
+        function addMoreFiles() {
+            createFloatingFile();
+        }
+
+        function resetGame() {
+            currentData = 0;
+            totalFiles = 0;
+            fileCounter = 0;
+            
+            // Remove all files
+            const filesContainer = document.getElementById('filesContainer');
+            filesContainer.innerHTML = '';
+            
+            updateDisplay();
+            closeMouth();
+            
+            // Add initial files
+            for (let i = 0; i < 6; i++) {
+                setTimeout(() => createFloatingFile(), i * 200);
+            }
+        }
+
+        // Initialize game
+        setupDropZone();
+        updateDisplay();
+        
+        // Load the actual folder images
+        loadFolderImages();
+        
+        // Create initial files
+        for (let i = 0; i < 6; i++) {
+            setTimeout(() => createFloatingFile(), i * 300);
+        }
+        
+        // Continuously add new files
+        setInterval(() => {
+            const currentFiles = document.querySelectorAll('.floating-file').length;
+            if (currentFiles < maxFiles) {
+                createFloatingFile();
+            }
+        }, 3000);
+
+        function loadFolderImages() {
+            // Create a canvas to convert the uploaded images to base64
+            const closedImg = document.getElementById('folderClosed');
+            const openImg = document.getElementById('folderOpen');
+            
+            // For now, we'll use placeholder images that will be replaced with the actual uploaded images
+            // In a real implementation, you would load the actual images from the uploaded files
+            
+            // Placeholder - these would be replaced with your actual folder images
+            closedImg.src = 'data:image/svg+xml;base64,' + btoa(`
+                <svg xmlns="http://www.w3.org/2000/svg" width="300" height="250" viewBox="0 0 300 250">
+                    <defs>
+                        <linearGradient id="folderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#5DADE2;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#3498DB;stop-opacity:1" />
+                        </linearGradient>
+                        <linearGradient id="tabGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#85C1E9;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#5DADE2;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+                    
+                    <!-- Folder tab -->
+                    <rect x="15" y="15" width="80" height="30" rx="15" fill="url(#tabGrad)" />
+                    
+                    <!-- Folder body -->
+                    <rect x="0" y="30" width="300" height="220" rx="20" fill="url(#folderGrad)" />
+                    
+                    <!-- Eyes -->
+                    <circle cx="110" cy="110" r="18" fill="white" />
+                    <circle cx="190" cy="110" r="18" fill="white" />
+                    
+                    <!-- Eyebrows -->
+                    <ellipse cx="110" cy="95" rx="12" ry="3" fill="#2980B9" />
+                    <ellipse cx="190" cy="95" rx="12" ry="3" fill="#2980B9" />
+                    
+                    <!-- Pupils -->
+                    <circle cx="110" cy="110" r="10" fill="#1A1A1A" />
+                    <circle cx="190" cy="110" r="10" fill="#1A1A1A" />
+                    
+                    <!-- Eye highlights -->
+                    <circle cx="107" cy="105" r="3" fill="white" />
+                    <circle cx="187" cy="105" r="3" fill="white" />
+                    
+                    <!-- Cheeks -->
+                    <circle cx="70" cy="130" r="8" fill="#E74C3C" opacity="0.3" />
+                    <circle cx="230" cy="130" r="8" fill="#E74C3C" opacity="0.3" />
+                    
+                    <!-- Mouth (closed/happy) -->
+                    <ellipse cx="150" cy="160" rx="30" ry="4" fill="#2980B9" />
+                </svg>
+            `);
+            
+            openImg.src = 'data:image/svg+xml;base64,' + btoa(`
+                <svg xmlns="http://www.w3.org/2000/svg" width="300" height="250" viewBox="0 0 300 250">
+                    <defs>
+                        <linearGradient id="folderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#5DADE2;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#3498DB;stop-opacity:1" />
+                        </linearGradient>
+                        <linearGradient id="tabGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#85C1E9;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#5DADE2;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+                    
+                    <!-- Folder tab -->
+                    <rect x="15" y="15" width="80" height="30" rx="15" fill="url(#tabGrad)" />
+                    
+                    <!-- Folder body -->
+                    <rect x="0" y="30" width="300" height="220" rx="20" fill="url(#folderGrad)" />
+                    
+                    <!-- Eyes -->
+                    <circle cx="110" cy="110" r="18" fill="white" />
+                    <circle cx="190" cy="110" r="18" fill="white" />
+                    
+                    <!-- Eyebrows -->
+                    <ellipse cx="110" cy="95" rx="12" ry="3" fill="#2980B9" />
+                    <ellipse cx="190" cy="95" rx="12" ry="3" fill="#2980B9" />
+                    
+                    <!-- Pupils -->
+                    <circle cx="110" cy="110" r="10" fill="#1A1A1A" />
+                    <circle cx="190" cy="110" r="10" fill="#1A1A1A" />
+                    
+                    <!-- Eye highlights -->
+                    <circle cx="107" cy="105" r="3" fill="white" />
+                    <circle cx="187" cy="105" r="3" fill="white" />
+                    
+                    <!-- Cheeks -->
+                    <circle cx="70" cy="130" r="8" fill="#E74C3C" opacity="0.3" />
+                    <circle cx="230" cy="130" r="8" fill="#E74C3C" opacity="0.3" />
+                    
+                    <!-- Mouth (open/excited) -->
+                    <ellipse cx="150" cy="160" rx="35" ry="25" fill="#8B4513" />
+                    
+                    <!-- Teeth -->
+                    <rect x="135" y="150" width="8" height="12" rx="2" fill="white" />
+                    <rect x="146" y="150" width="8" height="12" rx="2" fill="white" />
+                    <rect x="157" y="150" width="8" height="12" rx="2" fill="white" />
+                    
+                    <!-- Tongue -->
+                    <ellipse cx="150" cy="170" rx="20" ry="8" fill="#E74C3C" />
+                </svg>
+            `);
+        }
+    </script>
+</body>
+</html>
