@@ -88,12 +88,12 @@
             height: 100%;
             position: relative;
             cursor: pointer;
-            transition: transform 0.3s ease;
+            transition: all 0.2s ease;
         }
 
         .folder-character.drag-over {
-            transform: scale(1.1);
-            filter: brightness(1.1);
+            transform: scale(1.05);
+            filter: brightness(1.1) drop-shadow(0 0 20px rgba(52, 152, 219, 0.6));
         }
 
         .folder-image {
@@ -101,7 +101,10 @@
             height: 100%;
             object-fit: contain;
             filter: drop-shadow(0 8px 25px rgba(0,0,0,0.2));
-            transition: opacity 0.3s ease;
+            transition: opacity 0.2s ease;
+            position: absolute;
+            top: 0;
+            left: 0;
         }
 
         .folder-image.hidden {
@@ -146,6 +149,10 @@
             border: 2px solid rgba(255,255,255,0.5);
             pointer-events: auto;
             animation: float 6s ease-in-out infinite;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
         }
 
         .floating-file:hover {
@@ -154,20 +161,24 @@
         }
 
         .floating-file.dragging {
-            opacity: 0.7;
-            transform: rotate(10deg) scale(0.9);
+            opacity: 0.8;
+            transform: rotate(5deg) scale(1.1);
             z-index: 1000;
+            cursor: grabbing;
+            animation: none;
         }
 
         .file-icon {
             font-size: 24px;
             margin-bottom: 2px;
+            pointer-events: none;
         }
 
         .file-size {
             font-size: 8px;
             color: #2C3E50;
             font-weight: bold;
+            pointer-events: none;
         }
 
         .controls {
@@ -217,9 +228,12 @@
             border: 3px solid rgba(255,255,255,0.3);
         }
 
-        @keyframes blink {
-            0%, 90%, 100% { transform: scaleY(1); }
-            95% { transform: scaleY(0.1); }
+        .drag-ghost {
+            position: fixed;
+            pointer-events: none;
+            z-index: 2000;
+            opacity: 0.8;
+            transform: rotate(5deg) scale(0.9);
         }
 
         @keyframes float {
@@ -228,14 +242,14 @@
             66% { transform: translateY(-10px) rotate(-3deg); }
         }
 
-        @keyframes eyeFollow {
-            0% { transform: translate(-50%, -50%) translateX(0px); }
-            50% { transform: translate(-50%, -50%) translateX(3px); }
-            100% { transform: translate(-50%, -50%) translateX(0px); }
+        @keyframes eatAnimation {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
         }
 
-        .eye-tracking .pupil {
-            animation: eyeFollow 3s ease-in-out infinite;
+        .folder-character.eating {
+            animation: eatAnimation 0.5s ease;
         }
 
         @media (max-width: 768px) {
@@ -318,6 +332,8 @@
         let fileCounter = 0;
         const targetSize = 1024;
         const maxFiles = 8;
+        let isDragInProgress = false;
+        let mouthOpenTimeout = null;
 
         function createFloatingFile() {
             const fileType = fileTypes[Math.floor(Math.random() * fileTypes.length)];
@@ -336,20 +352,20 @@
             
             switch(side) {
                 case 0: // top
-                    x = Math.random() * window.innerWidth;
+                    x = Math.random() * (window.innerWidth - 100) + 50;
                     y = -80;
                     break;
                 case 1: // right
                     x = window.innerWidth + 80;
-                    y = Math.random() * window.innerHeight;
+                    y = Math.random() * (window.innerHeight - 100) + 50;
                     break;
                 case 2: // bottom
-                    x = Math.random() * window.innerWidth;
+                    x = Math.random() * (window.innerWidth - 100) + 50;
                     y = window.innerHeight + 80;
                     break;
                 case 3: // left
                     x = -80;
-                    y = Math.random() * window.innerHeight;
+                    y = Math.random() * (window.innerHeight - 100) + 50;
                     break;
             }
             
@@ -363,69 +379,157 @@
                 <div class="file-size">${actualSize}GB</div>
             `;
             
-            // Move towards center area
+            // Move towards center area with smooth transition
             setTimeout(() => {
                 const centerX = window.innerWidth / 2 + (Math.random() - 0.5) * 400;
                 const centerY = window.innerHeight / 2 + (Math.random() - 0.5) * 300;
-                file.style.left = centerX + 'px';
-                file.style.top = centerY + 'px';
+                file.style.transition = 'all 2s ease-out';
+                file.style.left = Math.max(50, Math.min(window.innerWidth - 110, centerX)) + 'px';
+                file.style.top = Math.max(50, Math.min(window.innerHeight - 110, centerY)) + 'px';
             }, 100);
             
+            // Add drag event listeners
             file.addEventListener('dragstart', handleDragStart);
             file.addEventListener('dragend', handleDragEnd);
+            file.addEventListener('drag', handleDrag);
+            
+            // Prevent default drag behavior on child elements
+            file.addEventListener('dragstart', (e) => {
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('application/json', JSON.stringify({
+                    size: parseInt(e.target.dataset.size || e.target.closest('.floating-file').dataset.size),
+                    id: e.target.id || e.target.closest('.floating-file').id
+                }));
+            });
             
             document.getElementById('filesContainer').appendChild(file);
             
             // Auto-remove after 30 seconds if not used
             setTimeout(() => {
                 if (file.parentNode) {
-                    file.remove();
+                    file.style.transition = 'all 1s ease-out';
+                    file.style.opacity = '0';
+                    file.style.transform = 'scale(0)';
+                    setTimeout(() => {
+                        if (file.parentNode) {
+                            file.remove();
+                        }
+                    }, 1000);
                 }
             }, 30000);
         }
 
         function handleDragStart(e) {
-            e.dataTransfer.setData('text/plain', JSON.stringify({
-                size: parseInt(e.target.dataset.size),
-                id: e.target.id
+            isDragInProgress = true;
+            const target = e.target.closest('.floating-file');
+            target.classList.add('dragging');
+            
+            // Set drag data
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('application/json', JSON.stringify({
+                size: parseInt(target.dataset.size),
+                id: target.id
             }));
-            e.target.classList.add('dragging');
+            
+            // Open mouth immediately
             openMouth();
+            
+            // Prevent text selection during drag
+            document.body.style.userSelect = 'none';
+        }
+
+        function handleDrag(e) {
+            // Optional: Add visual feedback during drag
         }
 
         function handleDragEnd(e) {
-            e.target.classList.remove('dragging');
-            closeMouth();
+            isDragInProgress = false;
+            const target = e.target.closest('.floating-file');
+            target.classList.remove('dragging');
+            
+            // Restore text selection
+            document.body.style.userSelect = '';
+            
+            // Close mouth with delay to prevent flickering
+            setTimeout(() => {
+                if (!isDragInProgress) {
+                    closeMouth();
+                }
+            }, 200);
         }
 
         function openMouth() {
-            document.getElementById('folderClosed').classList.add('hidden');
-            document.getElementById('folderOpen').classList.remove('hidden');
+            if (mouthOpenTimeout) {
+                clearTimeout(mouthOpenTimeout);
+                mouthOpenTimeout = null;
+            }
+            
+            const folderClosed = document.getElementById('folderClosed');
+            const folderOpen = document.getElementById('folderOpen');
+            
+            folderClosed.classList.add('hidden');
+            folderOpen.classList.remove('hidden');
         }
 
         function closeMouth() {
-            document.getElementById('folderClosed').classList.remove('hidden');
-            document.getElementById('folderOpen').classList.add('hidden');
+            if (mouthOpenTimeout) {
+                clearTimeout(mouthOpenTimeout);
+            }
+            
+            mouthOpenTimeout = setTimeout(() => {
+                const folderClosed = document.getElementById('folderClosed');
+                const folderOpen = document.getElementById('folderOpen');
+                
+                folderClosed.classList.remove('hidden');
+                folderOpen.classList.add('hidden');
+            }, 100);
         }
 
         function setupDropZone() {
             const folderCharacter = document.getElementById('folderCharacter');
+            let dragCounter = 0;
             
-            folderCharacter.addEventListener('dragover', (e) => {
+            // Prevent default drag behavior on the entire document
+            document.addEventListener('dragover', (e) => {
                 e.preventDefault();
+            });
+            
+            document.addEventListener('drop', (e) => {
+                e.preventDefault();
+            });
+            
+            folderCharacter.addEventListener('dragenter', (e) => {
+                e.preventDefault();
+                dragCounter++;
                 folderCharacter.classList.add('drag-over');
             });
             
+            folderCharacter.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+            });
+            
             folderCharacter.addEventListener('dragleave', (e) => {
-                folderCharacter.classList.remove('drag-over');
+                e.preventDefault();
+                dragCounter--;
+                if (dragCounter === 0) {
+                    folderCharacter.classList.remove('drag-over');
+                }
             });
             
             folderCharacter.addEventListener('drop', (e) => {
                 e.preventDefault();
+                dragCounter = 0;
                 folderCharacter.classList.remove('drag-over');
                 
-                const data = JSON.parse(e.dataTransfer.getData('text/plain'));
-                eatFile(data.size, data.id);
+                try {
+                    const data = JSON.parse(e.dataTransfer.getData('application/json'));
+                    if (data && data.size && data.id) {
+                        eatFile(data.size, data.id);
+                    }
+                } catch (error) {
+                    console.error('Error parsing drag data:', error);
+                }
             });
         }
 
@@ -433,14 +537,27 @@
             currentData += size;
             totalFiles++;
             
-            // Remove the eaten file
+            // Remove the eaten file with animation
             const file = document.getElementById(fileId);
             if (file) {
-                file.style.transform = 'scale(0)';
-                setTimeout(() => file.remove(), 300);
+                file.style.transition = 'all 0.3s ease-out';
+                file.style.transform = 'scale(0) rotate(180deg)';
+                file.style.opacity = '0';
+                setTimeout(() => {
+                    if (file.parentNode) {
+                        file.remove();
+                    }
+                }, 300);
             }
             
-            // Animate eating
+            // Add eating animation to folder
+            const folderCharacter = document.getElementById('folderCharacter');
+            folderCharacter.classList.add('eating');
+            setTimeout(() => {
+                folderCharacter.classList.remove('eating');
+            }, 500);
+            
+            // Close mouth after eating
             setTimeout(() => {
                 closeMouth();
             }, 500);
@@ -470,6 +587,11 @@
             const successMessage = document.getElementById('successMessage');
             successMessage.style.display = 'block';
             
+            // Add celebration effect
+            setTimeout(() => {
+                document.body.style.animation = 'none';
+            }, 2000);
+            
             setTimeout(() => {
                 successMessage.style.display = 'none';
             }, 4000);
@@ -483,6 +605,12 @@
             currentData = 0;
             totalFiles = 0;
             fileCounter = 0;
+            isDragInProgress = false;
+            
+            if (mouthOpenTimeout) {
+                clearTimeout(mouthOpenTimeout);
+                mouthOpenTimeout = null;
+            }
             
             // Remove all files
             const filesContainer = document.getElementById('filesContainer');
@@ -491,45 +619,66 @@
             updateDisplay();
             closeMouth();
             
-            // Add initial files
+            // Add initial files with staggered timing
             for (let i = 0; i < 6; i++) {
                 setTimeout(() => createFloatingFile(), i * 200);
             }
         }
 
-        // Initialize game
-        setupDropZone();
-        updateDisplay();
-        
-        // Load the actual folder images
-        loadFolderImages();
-        
-        // Create initial files
-        for (let i = 0; i < 6; i++) {
-            setTimeout(() => createFloatingFile(), i * 300);
-        }
-        
-        // Continuously add new files
-        setInterval(() => {
-            const currentFiles = document.querySelectorAll('.floating-file').length;
-            if (currentFiles < maxFiles) {
-                createFloatingFile();
-            }
-        }, 3000);
-
         function loadFolderImages() {
-            // Create a canvas to convert the uploaded images to base64
             const closedImg = document.getElementById('folderClosed');
             const openImg = document.getElementById('folderOpen');
             
-            // For now, we'll use placeholder images that will be replaced with the actual uploaded images
-            // In a real implementation, you would load the actual images from the uploaded files
+            // Add error handling for images
+            closedImg.onerror = () => {
+                console.warn('Could not load closed folder image, using placeholder');
+                closedImg.style.display = 'none';
+            };
             
-            // Placeholder - these would be replaced with your actual folder images
+            openImg.onerror = () => {
+                console.warn('Could not load open folder image, using placeholder');
+                openImg.style.display = 'none';
+            };
+            
+            // Set image sources
             closedImg.src = './folderclosed.png';
-            
             openImg.src = './folderopen.png';
         }
+
+        // Initialize game
+        document.addEventListener('DOMContentLoaded', () => {
+            setupDropZone();
+            updateDisplay();
+            loadFolderImages();
+            
+            // Create initial files with staggered timing
+            for (let i = 0; i < 6; i++) {
+                setTimeout(() => createFloatingFile(), i * 300);
+            }
+            
+            // Continuously add new files
+            setInterval(() => {
+                const currentFiles = document.querySelectorAll('.floating-file').length;
+                if (currentFiles < maxFiles && currentData < targetSize) {
+                    createFloatingFile();
+                }
+            }, 3000);
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            // Adjust file positions if they're outside the viewport
+            const files = document.querySelectorAll('.floating-file');
+            files.forEach(file => {
+                const rect = file.getBoundingClientRect();
+                if (rect.left < 0 || rect.right > window.innerWidth || rect.top < 0 || rect.bottom > window.innerHeight) {
+                    const newX = Math.max(50, Math.min(window.innerWidth - 110, rect.left));
+                    const newY = Math.max(50, Math.min(window.innerHeight - 110, rect.top));
+                    file.style.left = newX + 'px';
+                    file.style.top = newY + 'px';
+                }
+            });
+        });
     </script>
 </body>
 </html>
